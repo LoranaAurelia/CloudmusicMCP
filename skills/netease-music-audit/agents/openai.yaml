@@ -1,0 +1,6 @@
+interface:
+  display_name: "NetEase Music Audit"
+  short_description: "Audit recommendation quality and local feedback state"
+  default_prompt: "Use $netease-music-audit to audit my NetEase recommendation workflow without changing NetEase data."
+policy:
+  allow_implicit_invocation: true

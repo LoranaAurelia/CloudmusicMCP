@@ -1,0 +1,6 @@
+interface:
+  display_name: "NetEase Music Feedback"
+  short_description: "Learn from likes and managed playlist changes"
+  default_prompt: "Use $netease-music-feedback to synchronize read-only feedback from my managed NetEase playlists."
+policy:
+  allow_implicit_invocation: true

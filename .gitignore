@@ -1,0 +1,10 @@
+node_modules/
+data/session.json
+data/backend.pid.json
+*.log
+.env
+api-enhanced/node_modules/
+reports/
+work/
+data/recommender-state.json
+data/recommender-config.json

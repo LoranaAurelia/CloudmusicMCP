@@ -1,0 +1,6 @@
+interface:
+  display_name: "NetEase Music Curator"
+  short_description: "Research tracks and build a private playlist"
+  default_prompt: "Use $netease-music-curator to recommend a verified set of tracks and create a private NetEase playlist."
+policy:
+  allow_implicit_invocation: true

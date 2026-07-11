@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "playlistLabel": "Curated",
+  "preferredFeatures": [],
+  "avoidedFeatures": [],
+  "preferredArtists": [],
+  "excludedArtists": [],
+  "notes": "Copy this file to data/recommender-config.json and add your own preferences. Do not commit personal listening data."
+}

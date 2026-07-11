@@ -1,0 +1,22 @@
+{
+  "name": "cloudmusic-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "NetEase Cloud Music MCP server with optional generic curator skills",
+  "scripts": {
+    "start": "node src/index.js",
+    "login": "node scripts/login.js",
+    "test": "node --test tests/order.test.js",
+    "check": "node --check src/index.js && node --check src/backend.js && node --check src/client.js && node --check src/order.js && node --check scripts/login.js && node --check scripts/backend-control.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "open": "10.2.0",
+    "qrcode-terminal": "0.12.0",
+    "zod": "4.4.3"
+  }
+}
