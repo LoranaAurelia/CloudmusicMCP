@@ -60,7 +60,7 @@ const readPlaylistTrackIds = async (playlistId) => {
   const data = await api.call(`/playlist/detail?id=${id}&readNonce=${freshNonce()}`, { id })
   return (data.playlist?.trackIds || []).map((track) => String(track.id))
 }
-const setPlaylistOrder = async (playlistId, orderedIds) => api.call(`/song/order/update?writeNonce=${freshNonce()}`, {
+const setPlaylistOrder = async (playlistId, orderedIds) => api.call(`/song/order/update?noCache=1&writeNonce=${freshNonce()}`, {
   pid: String(playlistId), ids: JSON.stringify(orderedIds.map(String)),
 })
 
@@ -218,7 +218,10 @@ server.registerTool('create_playlist', {
     name: z.string().min(1).max(40),
     private: z.boolean().default(false),
   },
-}, guarded(({ name, private: isPrivate }) => api.call('/playlist/create', { name, privacy: isPrivate ? 10 : 0 })))
+}, guarded(({ name, private: isPrivate }) => api.call(
+  `/playlist/create?noCache=1&writeNonce=${freshNonce()}`,
+  { name, privacy: isPrivate ? 10 : 0 },
+)))
 
 server.registerTool('create_managed_playlist', {
   description: 'Create or resume one private managed recommendation playlist, set its idempotency marker, and add all supplied song IDs in one MCP operation.',
@@ -238,19 +241,22 @@ server.registerTool('create_managed_playlist', {
   let created = false
   if (!playlist) {
     const date = new Date().toISOString().slice(0, 10)
-    const result = await api.call('/playlist/create', { name: `✦⟳ ${label} · ${date} · ${direction}`, privacy: 10 })
+    const result = await api.call(
+      `/playlist/create?noCache=1&writeNonce=${freshNonce()}`,
+      { name: `✦⟳ ${label} · ${date} · ${direction}`, privacy: 10 },
+    )
     const id = result.playlist?.id || result.id
     if (!id) throw new Error('Playlist creation succeeded without a playlist ID.')
     playlist = { id }
     created = true
-    await api.call(`/playlist/desc/update?id=${id}&readNonce=${Date.now()}`, { id: String(id), desc: description })
+    await api.call(`/playlist/desc/update?id=${id}&noCache=1&writeNonce=${freshNonce()}`, { id: String(id), desc: description })
   }
   const beforeIds = await readPlaylistTrackIds(playlist.id)
   const existingIds = new Set(beforeIds)
   const missingIds = songIds.map(String).filter((id) => !existingIds.has(id))
   if (missingIds.length) {
     const tracks = missingIds.join(',')
-    await api.call(`/playlist/tracks?op=add&pid=${playlist.id}&tracks=${encodeURIComponent(tracks)}&readNonce=${Date.now()}`, {
+    await api.call(`/playlist/tracks?op=add&pid=${playlist.id}&tracks=${encodeURIComponent(tracks)}&noCache=1&writeNonce=${freshNonce()}`, {
       op: 'add', pid: String(playlist.id), tracks,
     })
   }
@@ -287,9 +293,9 @@ server.registerTool('update_playlist', {
   }
   const id = String(playlistId)
   const updates = []
-  if (name !== undefined) updates.push(['name', await api.call('/playlist/name/update', { id, name })])
-  if (description !== undefined) updates.push(['description', await api.call('/playlist/desc/update', { id, desc: description })])
-  if (tags !== undefined) updates.push(['tags', await api.call('/playlist/tags/update', { id, tags: tags.join(';') })])
+  if (name !== undefined) updates.push(['name', await api.call(`/playlist/name/update?noCache=1&writeNonce=${freshNonce()}`, { id, name })])
+  if (description !== undefined) updates.push(['description', await api.call(`/playlist/desc/update?noCache=1&writeNonce=${freshNonce()}`, { id, desc: description })])
+  if (tags !== undefined) updates.push(['tags', await api.call(`/playlist/tags/update?noCache=1&writeNonce=${freshNonce()}`, { id, tags: tags.join(';') })])
   return Object.fromEntries(updates)
 }))
 
@@ -304,7 +310,7 @@ server.registerTool('add_tracks_to_playlist', {
   if (!missingIds.length) return { playlistId: pid, addedTrackIds: [], expectedTrackIds: beforeIds, observedTrackIds: beforeIds, orderRepaired: false, orderVerified: true }
   const tracks = csv(missingIds)
   // /playlist/track/add is for video playlists. Music playlists use /playlist/tracks.
-  await api.call(`/playlist/tracks?op=add&pid=${encodeURIComponent(pid)}&tracks=${encodeURIComponent(tracks)}&writeNonce=${Date.now()}`, {
+  await api.call(`/playlist/tracks?op=add&pid=${encodeURIComponent(pid)}&tracks=${encodeURIComponent(tracks)}&noCache=1&writeNonce=${freshNonce()}`, {
     op: 'add', pid, tracks,
   })
   const expectedIds = appendMissingInOrder(beforeIds, missingIds)
@@ -324,7 +330,7 @@ server.registerTool('remove_tracks_from_playlist', {
 }, guarded(({ playlistId, songIds }) => {
   const pid = String(playlistId)
   const tracks = csv(songIds)
-  return api.call(`/playlist/tracks?op=del&pid=${encodeURIComponent(pid)}&tracks=${encodeURIComponent(tracks)}`, {
+  return api.call(`/playlist/tracks?op=del&pid=${encodeURIComponent(pid)}&tracks=${encodeURIComponent(tracks)}&noCache=1&writeNonce=${freshNonce()}`, {
     op: 'del', pid, tracks,
   })
 }))
@@ -337,7 +343,7 @@ server.registerTool('reorder_playlist_tracks', {
 server.registerTool('reorder_my_playlists', {
   description: 'Reorder the logged-in user playlist list. Pass the complete ordered playlist-ID list.',
   inputSchema: { orderedPlaylistIds: idsSchema },
-}, guarded(({ orderedPlaylistIds }) => api.call('/playlist/order/update', {
+}, guarded(({ orderedPlaylistIds }) => api.call(`/playlist/order/update?noCache=1&writeNonce=${freshNonce()}`, {
   ids: JSON.stringify(orderedPlaylistIds.map(String)),
 })))
 
@@ -347,7 +353,7 @@ server.registerTool('delete_playlist', {
     playlistId: z.union([z.string(), z.number()]),
     confirm: z.literal(true).describe('Must be true to confirm permanent deletion'),
   },
-}, guarded(({ playlistId }) => api.call('/playlist/delete', { id: String(playlistId) })))
+}, guarded(({ playlistId }) => api.call(`/playlist/delete?noCache=1&writeNonce=${freshNonce()}`, { id: String(playlistId) })))
 
 const shutdown = async () => {
   await backend.stop()

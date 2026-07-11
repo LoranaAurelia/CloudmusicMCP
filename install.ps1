@@ -24,6 +24,18 @@ if (-not (Test-Path -LiteralPath (Join-Path $Backend 'package.json'))) {
   git clone --depth 1 https://github.com/neteasecloudmusicapienhanced/api-enhanced.git $Backend
 }
 
+$CacheSafetyPatch = Join-Path $Root 'patches\api-enhanced-cache-safety.patch'
+& git -C $Backend apply --check --whitespace=nowarn $CacheSafetyPatch
+if ($LASTEXITCODE -eq 0) {
+  & git -C $Backend apply --whitespace=nowarn $CacheSafetyPatch
+  if ($LASTEXITCODE -ne 0) { throw 'Failed to apply the api-enhanced cache-safety patch.' }
+  Write-Host 'Applied api-enhanced cache-safety patch.'
+} else {
+  & git -C $Backend apply --reverse --check --whitespace=nowarn $CacheSafetyPatch
+  if ($LASTEXITCODE -ne 0) { throw 'api-enhanced does not match the supported cache-safety patch. Update the submodule or inspect it manually.' }
+  Write-Host 'api-enhanced cache-safety patch is already applied.'
+}
+
 pnpm install --child-concurrency=1 --network-concurrency=4
 pnpm --dir $Backend install --ignore-scripts --child-concurrency=1 --network-concurrency=4
 pnpm check

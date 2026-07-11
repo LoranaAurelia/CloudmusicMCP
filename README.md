@@ -4,6 +4,9 @@ A local stdio MCP server for searching NetEase Cloud Music and safely managing p
 
 This repository contains no account cookie, listening history, liked-track export, recommendation state or personal taste profile.
 
+Playlist writes are cache-safe: the installer patches the linked upstream backend so a
+NetEase business error returned as HTTP 200 cannot be replayed from its two-minute cache.
+
 ## Quick start
 
 Clone with the backend submodule:

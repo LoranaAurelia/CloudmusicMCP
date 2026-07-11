@@ -18,6 +18,17 @@ if [[ ! -f api-enhanced/package.json ]]; then
   git clone --depth 1 https://github.com/neteasecloudmusicapienhanced/api-enhanced.git api-enhanced
 fi
 
+cache_patch="$ROOT/patches/api-enhanced-cache-safety.patch"
+if git -C api-enhanced apply --check --whitespace=nowarn "$cache_patch"; then
+  git -C api-enhanced apply --whitespace=nowarn "$cache_patch"
+  echo "Applied api-enhanced cache-safety patch"
+elif git -C api-enhanced apply --reverse --check --whitespace=nowarn "$cache_patch"; then
+  echo "api-enhanced cache-safety patch is already applied"
+else
+  echo "api-enhanced does not match the supported cache-safety patch; update the submodule or inspect it manually" >&2
+  exit 1
+fi
+
 pnpm install --child-concurrency=1 --network-concurrency=4
 pnpm --dir api-enhanced install --ignore-scripts --child-concurrency=1 --network-concurrency=4
 pnpm check

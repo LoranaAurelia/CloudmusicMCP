@@ -33,6 +33,10 @@ git clone --depth 1 https://github.com/neteasecloudmusicapienhanced/api-enhanced
 
 Do not copy a private/local backend checkout into this repository.
 
+The installer applies `patches/api-enhanced-cache-safety.patch` after acquiring the
+linked backend. It excludes playlist mutations from the upstream two-minute HTTP-200
+cache, because NetEase business failures can also return HTTP 200.
+
 ## Safety
 
 - Never expose `data/session.json` or cookies.

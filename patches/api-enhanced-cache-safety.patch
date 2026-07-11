@@ -1,0 +1,26 @@
+diff --git a/server.js b/server.js
+--- a/server.js
++++ b/server.js
+@@ -262,7 +262,21 @@ async function createServer() {
+   /**
+    * Cache
+    */
+-  app.use(cache('2 minutes', (_, res) => res.statusCode === 200))
++  // NetEase business failures can use HTTP 200. Do not cache playlist writes:
++  // otherwise a failed create/write response is replayed for two minutes.
++  const mcpMutationRoutes = new Set([
++    '/playlist/create',
++    '/playlist/delete',
++    '/playlist/tracks',
++    '/playlist/name/update',
++    '/playlist/desc/update',
++    '/playlist/tags/update',
++    '/playlist/order/update',
++    '/song/order/update',
++  ])
++  app.use(cache('2 minutes', (req, res) =>
++    res.statusCode === 200 && req.query.noCache !== '1' && !mcpMutationRoutes.has(req.path),
++  ))
+ 
+   /**
+    * Special Routers
