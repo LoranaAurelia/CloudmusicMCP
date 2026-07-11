@@ -6,6 +6,7 @@ diff --git a/server.js b/server.js
     * Cache
     */
 -  app.use(cache('2 minutes', (_, res) => res.statusCode === 200))
+-
 +  // NetEase business failures can use HTTP 200. Do not cache playlist writes:
 +  // otherwise a failed create/write response is replayed for two minutes.
 +  const mcpMutationRoutes = new Set([
@@ -21,6 +22,6 @@ diff --git a/server.js b/server.js
 +  app.use(cache('2 minutes', (req, res) =>
 +    res.statusCode === 200 && req.query.noCache !== '1' && !mcpMutationRoutes.has(req.path),
 +  ))
- 
++
    /**
     * Special Routers
