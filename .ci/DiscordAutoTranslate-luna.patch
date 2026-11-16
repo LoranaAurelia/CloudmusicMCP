@@ -1,0 +1,93 @@
+diff --git a/app/src/main/java/io/github/wxmyyds/discordautotranslate/core/Protocols.java b/app/src/main/java/io/github/wxmyyds/discordautotranslate/core/Protocols.java
+--- a/app/src/main/java/io/github/wxmyyds/discordautotranslate/core/Protocols.java
++++ b/app/src/main/java/io/github/wxmyyds/discordautotranslate/core/Protocols.java
+@@ -110,10 +110,16 @@
+             JSONObject body = new JSONObject();
+             body.put("model", model);
++            boolean luna = model.trim().equalsIgnoreCase("gpt-6-luna")
++                    || model.trim().toLowerCase(java.util.Locale.ROOT).startsWith("gpt-6-luna-");
+             if (Config.PROTOCOL_OPENAI_RESPONSES.equals(protocol)) {
+                 body.put("stream", streaming);
+                 body.put("instructions", prompt);
+                 body.put("input", wrapped);
+-                body.put("temperature", TEMPERATURE);
++                if (luna) {
++                    body.put("reasoning", new JSONObject().put("effort", "none"));
++                } else {
++                    body.put("temperature", TEMPERATURE);
++                }
+             } else if (Config.PROTOCOL_ANTHROPIC_MESSAGES.equals(protocol)) {
+                 // system 是顶层字段而非消息；max_tokens 为该协议必填项。
+                 body.put("system", prompt);
+@@ -137,7 +143,11 @@
+                 messages.put(system);
+                 messages.put(user);
+                 body.put("messages", messages);
+-                body.put("temperature", TEMPERATURE);
++                if (luna) {
++                    body.put("reasoning_effort", "none");
++                } else {
++                    body.put("temperature", TEMPERATURE);
++                }
+                 body.put("stream", streaming);
+             } else {
+                 throw new TranslationException(TranslationException.Kind.CONFIG,
+diff --git a/app/src/main/java/io/github/wxmyyds/discordautotranslate/translate/ApiTester.java b/app/src/main/java/io/github/wxmyyds/discordautotranslate/translate/ApiTester.java
+--- a/app/src/main/java/io/github/wxmyyds/discordautotranslate/translate/ApiTester.java
++++ b/app/src/main/java/io/github/wxmyyds/discordautotranslate/translate/ApiTester.java
+@@ -6,3 +6,4 @@
+ import io.github.wxmyyds.discordautotranslate.core.Config;
++import io.github.wxmyyds.discordautotranslate.core.TranslationException;
+ 
+ /**
+@@ -21,8 +22,17 @@
+         /** 耗时毫秒。 */
+         public final long elapsedMs;
++        /** 脱敏后的失败原因；不包含服务端原始响应或请求凭据。 */
++        @Nullable
++        public final String error;
+ 
+         Result(boolean ok, @Nullable String translated, long elapsedMs) {
++            this(ok, translated, elapsedMs, null);
++        }
++
++        Result(boolean ok, @Nullable String translated, long elapsedMs,
++               @Nullable String error) {
+             this.ok = ok;
+             this.translated = translated;
+             this.elapsedMs = elapsedMs;
++            this.error = error;
+         }
+@@ -82,4 +92,9 @@
+             } catch (Throwable failure) {
+-                result = new Result(false, null, System.currentTimeMillis() - start);
++                // Only surface the local, categorized error; never raw HTTP bodies,
++                // request headers, API keys or model input.
++                String detail = failure instanceof TranslationException
++                        ? ((TranslationException) failure).userMessage()
++                        : "内部异常：" + failure.getClass().getSimpleName();
++                result = new Result(false, null, System.currentTimeMillis() - start, detail);
+             }
+             synchronized (this) {
+@@ -124,5 +139,8 @@
+         } catch (Throwable failure) {
+-            return new Result(false, null, System.currentTimeMillis() - start);
++            String detail = failure instanceof TranslationException
++                    ? ((TranslationException) failure).userMessage()
++                    : "配置检查异常：" + failure.getClass().getSimpleName();
++            return new Result(false, null, System.currentTimeMillis() - start, detail);
+         }
+     }
+ }
+diff --git a/app/src/main/java/io/github/wxmyyds/discordautotranslate/ui/SettingsActivity.java b/app/src/main/java/io/github/wxmyyds/discordautotranslate/ui/SettingsActivity.java
+--- a/app/src/main/java/io/github/wxmyyds/discordautotranslate/ui/SettingsActivity.java
++++ b/app/src/main/java/io/github/wxmyyds/discordautotranslate/ui/SettingsActivity.java
+@@ -1118,5 +1118,8 @@
+             message.append(getString(R.string.result_success, result.elapsedMs));
+         } else {
+             message.append(getString(R.string.result_failure));
++            if (result.error != null && !result.error.isEmpty()) {
++                message.append("\n").append(result.error);
++            }
+         }
+         if (result.translated != null) {
